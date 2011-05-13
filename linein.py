@@ -1,14 +1,16 @@
 import markov
 import dialogue
 import pickle
+import nltk
 
 def learn(mdict, fname):
+	fname = '../Master source list/' + fname
 	filein = open(fname)
 	fulltext = filein.read()
 	filein.close()
 	fulltext = fulltext.split('\n')[:-1]
 	
-	if fulltext[0] == '<list>':
+	if fulltext[0] == 'list:':
 		print 'reading files from ' + fname
 		fulltext = fulltext[1:]
 		for text in fulltext:
@@ -22,11 +24,7 @@ def learn(mdict, fname):
 		print 'learning complete'
 
 def main():
-	fname = 'sourcetexts/' + raw_input('Enter a text file to learn from (or a list of texts): ')
-	filein = open(fname)
-	fulltext = filein.read()
-	filein.close()
-	fulltext = fulltext.split('\n')[:-1]
+	fname = raw_input('Enter a text file to learn from (or a list of texts): ')
 	print 'loading dictionary...'
 	try:
 		pkl_file = open('dictionary.pkl', 'rb')

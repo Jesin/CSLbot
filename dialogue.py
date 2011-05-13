@@ -73,7 +73,7 @@ def answer(message, speaker, public, mdict):
 def formResponse(message, speaker, mdict, public=True):
 	messageType = determineMessageType(message, speaker)
 	print 'Message type for: ', message, 'is', messageType
-	responseTypes = {'Greeting':greeting, 'Unknown': confusion, 'Question':answer}
+	responseTypes = {'Greeting':greeting, 'Unknown': confusion, 'Question':confusion}
 	response = responseTypes[messageType](message, speaker, public, mdict)
 	return response
 

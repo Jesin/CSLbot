@@ -3,8 +3,10 @@
 import random
 import string
 import sys
+import nltk
+import english
 
-sentenceClosings = '!?.'
+maxlength = 5
 
 #beginnings and endings of lines are represented by "^^^" and "$$$", respectively
 
@@ -35,181 +37,131 @@ def pick(freqdict):
 		
 def finalize(message):
 	#message[0:1] = message[0:1].upper()
-	if message[-1] not in sentenceClosings:
+	if message[-1] not in english.sentence_closings:
 		message += '.'
 	return message
+
+def addInOneDirection(wordRelations, things, depth=1, maxDepth=3):
+	if depth>maxDepth: return
+	if things[0] not in wordRelations:
+		wordRelations[things[0]] = [1, {}]
+	else:
+		wordRelations[things[0]][0]+=1
+	if things[0] is not english.br and len(things) > 1:
+		addInOneDirection(wordRelations[things[0]][1], things[1:], depth+1)
+
+def addFromTokens(dictionary, line):
+	for x in range(1, len(line)-1):
+		if line[x] not in dictionary:
+			dictionary[line[x]] = [{},{}]
+		tmp = line[:x]
+		tmp.reverse()
+		addInOneDirection(dictionary[line[x]][0], tmp)
+		addInOneDirection(dictionary[line[x]][1], line[x+1:])
+
+def addFromLine(dictionary, rawline):
+	line =  [english.br] + english.fixTokenizedText(nltk.word_tokenize(rawline)) + [english.br]
+	addFromTokens(dictionary, line)
 	
+#used to find a dictionary of the words and frequencies that come after a particular sequence in a particular dictionary
+#direction 0=pre, 1=post
+#words should be in reverse english order for pre
+def getFreqTable(dictionary, direction, words):
+	#print 'words', words
+	try:
+		tmp = dictionary[words[0]][direction]
+		stuff = words[1:]
+		for i in range(len(stuff)):
+			tmp = tmp[stuff[i]][1]
+		freqdict = {}
+		for thing in tmp:
+			freqdict[thing] = tmp[thing][0]
+		return freqdict
+	except KeyError:
+		#print 'whoops, error'
+		return {}
+
+def weightFreqTable(table, weight):
+	for thing in table:
+		table[thing] = table[thing]*weight
+	return table
+
+#words are in proper english order, weights in order of [level1weight, level2weight, etc]
+# len(words) and len(weights) should be equal
+def compilePreFrequencyTable(dictionary, words, weights=None):
+	#print 'prefreqtable words', words
+	if not weights or len(weights) < len(words): weights = [1]*len(words)
+	if len(words) is not len(weights): weights = weights[:len(words)]
+	if len(words) == 1:
+		return weightFreqTable(getFreqTable(dictionary, 0, words[:]), weights[0])
+	masterlist = {} #weightFreqTable(getFreqTable(dictionary, 0, words[:]), weights[0])
+	i = 0
+	thing = []
+	while i < len(words):
+		thing.insert(0, words[i])
+		#print 'thing', thing
+		otherthing = weightFreqTable(getFreqTable(dictionary, 0, thing), weights[i])
+		#print otherthing
+		if not masterlist: masterlist = otherthing
+		else: masterlist = synthesize([masterlist, otherthing])
+		#print i, masterlist
+		i+=1
+	return masterlist
+
+#words are in proper english order, weights in order of [level1weight, level2weight, etc]
+# len(words) and len(weights) should be equal
+def compilePostFrequencyTable(dictionary, words, weights=None):
+	if not weights or len(weights) < len(words): weights = [1]*len(words)
+	if len(words) is not len(weights): weights = weights[:len(words)]
+	if len(words) == 1:
+		return weightFreqTable(getFreqTable(dictionary, 1, words[:]), weights[0])
+	masterlist = {} #weightFreqTable(getFreqTable(dictionary, 0, words[:]), weights[0])
+	i = 1
+	thing = []
+	while i <= len(words):
+		thing.insert(0, words[-1*i])
+		otherthing = weightFreqTable(getFreqTable(dictionary, 1, thing), weights[i-1])
+		#print otherthing
+		if not masterlist: masterlist = otherthing
+		else: masterlist = synthesize([masterlist, otherthing])
+		#print i, masterlist
+		i+=1
+	return masterlist
+	
+def generate(dictionary, word):
+	maxlevel = 5
+	line = [word]
+	level = 1
+	weights = [1, 2, 3, 4, 5, 6]
+	while line[0] != english.br:
+		newword = pick(compilePreFrequencyTable(dictionary, line[:level], weights))
+		line.insert(0, newword)
+		if level < maxlevel: level +=1
+		#print line
+	level = 1
+	while line[-1] != english.br:
+		newword = pick(compilePostFrequencyTable(dictionary, line[-1*level:], weights))
+#		print 'line', line
+#		print 'newword', newword
+		line.append(newword)
+		if level < maxlevel: level +=1
+	returnstring = english.stringify(line)#' '.join(line[1:-1]).capitalize()
+	if returnstring[-1] not in english.sentence_closings: returnstring += '.'
+	return returnstring
 
 class MarkovDict:
 	def __init__(self):
 		self.relations={}
-		self.order2relations={}
 		self.aliases = {}
 		
-		
-	def addcontext(self, word1, word2):
-		
-		if word1 in self.aliases and self.aliases[word1] is not list: word1 = self.aliases[word1]
-		if word2 in self.aliases and self.aliases[word2] is not list: word2 = self.aliases[word2]
-		#commaless2 = word2 if word2[:-2] == ',' else word2
-		if word1 not in self.relations:
-			self.relations[word1] = ({},{})
-		if word2 not in self.relations:
-			self.relations[word2] = ({},{})
-		if word1 not in self.relations[word2][0]: self.relations[word2][0][word1] = 1
-		else: self.relations[word2][0][word1]+=1
-		if word2 not in self.relations[word1][1]: self.relations[word1][1][word2] = 1
-		else: self.relations[word1][1][word2]+=1
-		
-
 	def learn(self, message):
-		#message[0] = message[0].lower()
-		words = message.split()
-		words.append('$$$')
-		prev = '^^^'
-		for current in words:
-			c = current
-			if prev in self.aliases:
-				prev = self.aliases[prev]
-				if type(prev) is list:
-					prev = prev[0]
-			if current in self.aliases:
-				c = self.aliases[c]
-				if type(c) is list:
-					c = c[0]
-			self.addcontext(prev, c)
-			prev = current
-		
-		if len(words) <3: return
-		prev = '^^^'
-		mid1 = words[0]
-		mid2 = words[1]
-		post = words[2]
-		mid = mid1 + ' ' + mid2
-		postindex = 2
-		while post != '$$$':
-			#print 'starting order 2 learning cycle'
-			#print [prev, mid, post]
-			if mid not in self.order2relations:
-				self.order2relations[mid] = ({}, {})
-			if prev not in self.order2relations[mid][0]: self.order2relations[mid][0][prev] = 0
-			self.order2relations[mid][0][prev]+=1
-			if post not in self.order2relations[mid][1]: self.order2relations[mid][1][post] = 0
-			self.order2relations[mid][1][post]+=1
-			prev = mid1
-			mid1 = mid2
-			mid2 = post
-			postindex+=1
-			post = words[postindex]
-			mid = mid1 + ' ' + mid2
-		if mid not in self.order2relations:
-			self.order2relations[mid] = ({}, {})
-		if prev not in self.order2relations[mid][0]: self.order2relations[mid][0][prev] = 0
-		self.order2relations[mid][0][prev]+=1
-		if post not in self.order2relations[mid][1]: self.order2relations[mid][1][post] = 0
-		self.order2relations[mid][1][post]+=1
-		
-		#print self.order2relations
-			
-	def pick(self, freqdict):
-		randval = random.random() * sum(freqdict.itervalues())
-		for k in freqdict:
-			randval -= freqdict[k]
-			if randval <= 0: return k
+		for thing in nltk.sent_tokenize(message):
+			thing = thing.lower()
+			addFromLine(self.relations, thing)
 
 	def answer(self, words):
-		#change this array to modify order 2 prevalence: [order, order2]
-		#DON'T MAKE EITHER ONE ZERO
-		weights = [1, 15]
-		base = None
-		count = sys.maxint
-		for word in words:
-			if word in self.relations:
-				tmp = len(self.relations[word][0]) + len(self.relations[word][1])
-				if tmp and tmp < count:
-					count = tmp
-					base = word
-		print 'making a string around the word %s' % base
-		if not count: return ''
-		result = [base]
-		#Change limit for sentence length here
-		maxlimit = 4
-		limit = maxlimit
-		while result[-1] != '$$$':
-			
-			al = result[-1]
-			if al in self.aliases:
-				if self.aliases[al] is not set: al = self.aliases[al]
-			
-			freqdict = self.relations[al][1]
-			if len(result) > 1:
-				chunk = result[-2] + ' ' + result[-1]
-				if chunk in self.order2relations:
-					freqdict = synthesize([freqdict, self.order2relations[chunk][1]], weights)
-			#print 'adding word to end from following list'
-			#print freqdict
-			if not limit and '$$$' in freqdict.itervalues():
-				result.append('$$$')
-			else:
-				result.append(pick(freqdict))
-			limit-=1
-		
-		limit = maxlimit
-		while result[0] != '^^^':
-			
-			al = result[0]
-			if al in self.aliases:
-				if self.aliases[al] is not set: al = self.aliases[al]
-			
-			freqdict = self.relations[al][0]
-			if len(result) > 2:
-				chunk = result[0] + ' ' + result[1]
-				if chunk in self.order2relations:
-					freqdict = synthesize([freqdict, self.order2relations[chunk][0]], weights)
-			#print 'adding word to start from following list:'
-			#print freqdict
-			if not limit and '^^^' in freqdict.itervalues():
-				result.insert(0, '^^^')
-			else:
-				result.insert(0, pick(freqdict))
-			limit-=1
-		result[1] = result[1].capitalize()	
-		message = ' '.join(result[1:-1])
-		return finalize(message)
-
-		return ' '.join(result[1:-1])
+		return generate(self.relations, random.choice(self.relations.keys()))
 	
-	#both word1 and word2 should already be in the dictionary
-	#need to finish this
-	def addalias(self, words):
-		if len(words) < 2:
-			return 'nope, not gonna alias that'
-		for word in words:
-			if word not in self.relations: return 'error: one or more words not in dictionary'
-		aliaslist = words[1:]
-		baseword = words[0]
-	
-		#taking care of order 1 here
-		
-		predicts = []
-		postdicts = []
-		for thing in words:
-			predicts.append(self.relations[thing][0])
-			postdicts.append(self.relations[thing][1])
-			del(self.relations[thing])
-		#print predicts
-		#print postdicts
-		self.relations[baseword] = [{},{}]
-		self.relations[baseword][0] = synthesize(predicts)
-		self.relations[baseword][1] = synthesize(postdicts)
-		if baseword not in self.aliases or type(self.aliases[baseword])==str:
-			#print 'oh noez i have a string here'
-			self.aliases[baseword] = {baseword}
-		#print self.aliases[baseword]
-		for thing in words:
-			set(self.aliases[baseword]).add(thing)
-			self.aliases[thing] = baseword
-		return 'aliases added, list is now ' + str(self.aliases[baseword])
 	
 	def words(self):
 		l = self.relations.keys()
