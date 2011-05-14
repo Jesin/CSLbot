@@ -3,6 +3,8 @@
 import random
 import re
 import markov
+import nltk
+import english
 
 #note: at the moment only classifies messages correctly if you use correct grammar
 
@@ -55,9 +57,13 @@ def greeting(message, speaker, public, mdict):
 
 def confusion(message, speaker, public, mdict):
 	if random.random() < markovchance:
-		words = message.split(' ')
+		things = nltk.sent_tokenize(message)
+		words = nltk.word_tokenize(things[-1].lower())
+		words = english.fixTokenizedText(words)
 		print 'making a response using markov'
-		return mdict.answer(words)
+		reply = mdict.answer(words)
+		if reply == '$NULL$': reply = random.choice(acknowledgements)		
+		return reply
 	return random.choice(acknowledgements)
 	
 def answer(message, speaker, public, mdict):

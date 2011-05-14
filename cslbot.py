@@ -128,7 +128,7 @@ def registerOwner(connection, source, argument):
 		msgGroup(source + " requested ownership permission and was denied due to an incorrect password")
 		
 def alias(connection, source, argument):
-	if argument == None:
+	if argument == 'noargs':
 		connection.privmsg(source, 'please provide at least 2 different words to alias')
 		return
 	words = argument.split(' ')
@@ -150,11 +150,14 @@ def exit(connection, source, argument):
 def known(connection, source, argument):
 	connection.privmsg(source, bot.mdict.known(argument))
 
-def capscheck(connection, source, argument):
-	connection.privmsg(source, bot.mdict.capscheck())
-	
 def words(connection, source, argument):
 	connection.privmsg(source, bot.mdict.words())
+	
+def useless(connection, source, argument):
+	if argument == 'noargs' or len(argument.split()) > 1 or not int(argument):
+		connection.privmsg(source, bot.mdict.fewestContexts())
+	else:
+		connection.privmsg(source, bot.mdict.fewestContexts(int(argument)))
 	
 def commandlist(connection, source, argument):
 	connection.privmsg(source, 'Available commands: ' + ', '.join(funcdict))
@@ -164,16 +167,16 @@ def help(connection, source, argument):
 	if argument is 'noargs':
 		response = 'This is the help command.  Ask about a topic with \"!help <topic>\"'
 	elif argument.lower() in funcdict:
-		if argument.lower() in funchelp: response = funchelp[argument.lower()]
+		if argument.lower() in funchelp: response = argument.lower() + ': ' + funchelp[argument.lower()]
 		else: response = 'Matt added this command but didn\'t bother to add any help info for it. What a jerk.'
 	connection.privmsg(source, response)
 
 #General responder
 
 #list of commands with linked functions, and their help strings
-funcdict = {'identify':registerOwner, 'alias':alias, 'exit':exit, 'save': save, 'list':commandlist, 'help':help, 'savepersona':savepersona, 'ignore':ignore, 'unignore':unignore, 'known':known, 'capscheck': capscheck, 'words':words}
+funcdict = {'identify':registerOwner, 'alias':alias, 'exit':exit, 'save': save, 'list':commandlist, 'help':help, 'savepersona':savepersona, 'ignore':ignore, 'unignore':unignore, 'known':known, 'words':words, 'useless':useless}
 
-funchelp = {'identify': 'adds you to the list of owners.  Use with \"!identify <password>\"', 'alias': 'alias multiple words to mean the same thing.  Use with \"!alias <baseword> <alias1> <alias2> <alias3> <etc>\"', 'exit': 'makes me save my dictionary and persona and quit.  Use with \"!exit\"', 'save': 'saves my dictionary.  Use with \"!save\"', 'list': 'prints a list of commands.  Use with \"!list\"', 'help': 'gives help on commands and topics.  Use with \"!help <topic>\"', 'grue':'The grue is a sinister, lurking presence in the dark places of the earth. Its favorite diet is adventurers, but its insatiable appetite is tempered by its fear of light. No grue has ever been seen by the light of day, and few have survived its fearsome jaws to tell the tale.', 'savepersona':'saves the current persona. Use with \"!savepersona\"', 'ignore': 'adds nicks to the ignorelist. Use with \"!ignore\" <nick1> <nick2> <nick3> <etc>', 'unignore': 'removes nicks from the ignorelist. Use with \"!unignore <nick1> <nick2> <nick3> <etc>\"', 'known':'gives the number of contexts a word has in the dictionary. Use with \"!known <word>\"'}
+funchelp = {'identify': 'adds you to the list of owners.  Use with \"!identify <password>\"', 'alias': 'alias multiple words to mean the same thing.  Use with \"!alias <baseword> <alias1> <alias2> <alias3> <etc>\"', 'exit': 'makes me save my dictionary and persona and quit.  Use with \"!exit\"', 'save': 'saves my dictionary.  Use with \"!save\"', 'list': 'prints a list of commands.  Use with \"!list\"', 'help': 'gives help on commands and topics.  Use with \"!help <topic>\"', 'grue':'The grue is a sinister, lurking presence in the dark places of the earth. Its favorite diet is adventurers, but its insatiable appetite is tempered by its fear of light. No grue has ever been seen by the light of day, and few have survived its fearsome jaws to tell the tale.', 'savepersona':'saves the current persona. Use with \"!savepersona\"', 'ignore': 'adds nicks to the ignorelist. Use with \"!ignore\" <nick1> <nick2> <nick3> <etc>', 'unignore': 'removes nicks from the ignorelist. Use with \"!unignore <nick1> <nick2> <nick3> <etc>\"', 'known':'gives the number of contexts a word has in the dictionary. Use with \"!known <word>\"', 'useless': 'gives the words in the dictionary with the fewest contexts, and the number of contexts they have each.  If an argument is provided, it will give that many words; otherwise, 10 will be given.'}
 
 def makeResponse(speaker, connection, message, channel=None):
 	#check for commands

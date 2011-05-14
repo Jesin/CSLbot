@@ -58,6 +58,9 @@ def addFromTokens(dictionary, line):
 		tmp.reverse()
 		addInOneDirection(dictionary[line[x]][0], tmp)
 		addInOneDirection(dictionary[line[x]][1], line[x+1:])
+	#getTopicWords(dictionary, line[1:-1])
+	#print 'markov quotients after learning:'
+	#print zip(line[1:-1], [markov_quotient(dictionary, word) for word in line[1:-1]])
 
 def addFromLine(dictionary, rawline):
 	line =  [english.br] + english.fixTokenizedText(nltk.word_tokenize(rawline)) + [english.br]
@@ -85,6 +88,17 @@ def weightFreqTable(table, weight):
 	for thing in table:
 		table[thing] = table[thing]*weight
 	return table
+	
+#finds the most interesting words in a line
+#doesn't include breaks
+def getTopicWords(dictionary, words):
+	topics = list((set(words) - set(english.stopwords)) - set(english.punctuation))
+	if len(topics) < 1:
+		topics = words
+	topicquotients = dict(zip(topics, [markov_quotient(dictionary, w) for w in topics]))
+	#print 'topic words and quotients:'
+	#print topicquotients
+	return topicquotients
 
 #words are in proper english order, weights in order of [level1weight, level2weight, etc]
 # len(words) and len(weights) should be equal
@@ -129,10 +143,12 @@ def compilePostFrequencyTable(dictionary, words, weights=None):
 	return masterlist
 	
 def generate(dictionary, word):
+	if word not in dictionary:
+		return '$NULL$'
 	maxlevel = 5
 	line = [word]
 	level = 1
-	weights = [1, 2, 3, 4, 5, 6]
+	weights = [1, 2, 4, 8, 16, 32]
 	while line[0] != english.br:
 		newword = pick(compilePreFrequencyTable(dictionary, line[:level], weights))
 		line.insert(0, newword)
@@ -148,6 +164,15 @@ def generate(dictionary, word):
 	returnstring = english.stringify(line)#' '.join(line[1:-1]).capitalize()
 	if returnstring[-1] not in english.sentence_closings: returnstring += '.'
 	return returnstring
+	
+def markov_quotient(dictionary, word):
+	if word not in dictionary: return 0
+	numpres = len(dictionary[word][0])
+	numposts = len(dictionary[word][1])
+	precontexts = sum([dictionary[word][0][thing][0] for thing in dictionary[word][0]])
+	postcontexts = sum([dictionary[word][1][thing][0] for thing in dictionary[word][1]])
+	quotient = 1.0*(precontexts+postcontexts)/(numpres+numposts)
+	return quotient
 
 class MarkovDict:
 	def __init__(self):
@@ -160,7 +185,12 @@ class MarkovDict:
 			addFromLine(self.relations, thing)
 
 	def answer(self, words):
-		return generate(self.relations, random.choice(self.relations.keys()))
+		topictable = getTopicWords(self.relations, words)
+		for thing in topictable: topictable[thing] = (int)(topictable[thing]*10)
+		topictable = dict(topictable)
+		decision = pick(topictable)
+		print 'forming a line with', decision, 'from the table', topictable
+		return generate(self.relations, decision)
 	
 	
 	def words(self):
@@ -168,33 +198,33 @@ class MarkovDict:
 		print 'words in the dictionary:'
 		print l
 		return 'I printed the complete list of words to the terminal, but I thought you might like to know that I have %d words in my dictionary!'%len(l)
-	
-	def capscheck(self):
-		masterlist = {}
-		for word in self.relations:
-			l = word.lower()
-			if l not in masterlist: masterlist[l] = [word]
-			else: masterlist[l].append(word)
-		for thing in masterlist.keys():
-			if len(masterlist[thing]) < 2:
-				del(masterlist[thing])
-		#print 'masterlist to begin with:'
-		#print masterlist
-		fixylist = []
-		for thing in masterlist:
-			masterlist[thing].sort(reverse=True)
-			fixylist.append(masterlist[thing])
-		#print 'fixylist:'
-		#print fixylist
-		for thing in fixylist:
-			if thing: print self.addalias(thing)
-		return 'I printed some stuff but it\'s a bit too long to say on IRC.'
-
 		
 	def known(self, word):
 		if word not in self.relations: return 'word %s not in dictionary' %word
+		return 'word %s has %d contexts' %(word, self.contexts(word))
+		
+	def contexts(self, word):
+		c = 0
 		location = self.relations[word]
-		contexts = 0
-		for x in location[0].itervalues(): contexts += x
-		for x in location[1].itervalues(): contexts += x
-		return 'word %s has %d contexts' %(word, contexts)
+		for x in [location[0][w][0] for w in location[0]]: c += x
+		for x in [location[1][w][0] for w in location[1]]: c += x
+		return c/2
+		
+	def fewestContexts(self, number=10):
+		if number > len(self.relations): number = len(self.relations)
+		word_tuples = [(word, self.contexts(word)) for word in self.relations]
+		returnWords = sorted(word_tuples, key=lambda word:word[1])[:number]
+		print 'Context List:', returnWords
+		return 'These %d words have the fewest contexts: %s' %(number, [w[0] for w in returnWords])
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		

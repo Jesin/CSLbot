@@ -36,7 +36,6 @@ def main():
 		print 'error loading dictionary. Using new dictionary instead.'
 	
 	learn(mdict, fname)
-	mdict.capscheck()
 	
 	print 'saving dictionary...'
 	output = open('dictionary.pkl', 'wb')
