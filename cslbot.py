@@ -32,7 +32,7 @@ class IRCBot:
 			print 'dictionary not found, making new one'
 			self.mdict = markov.MarkovDict()
 		self.replyrate = 1
-		self.ignorelist = set(('ribbot', 'SeeBorg-sprego', 'SeeBorg-nsfw', 'Ayanami-May', 'Ayanami_May'))
+		self.ignorelist = set(('ribbot', 'SeeBorg-sprego', 'SeeBorg-nsfw', 'Ayanami-May', 'Ayanami_May', 'pieborg'))
 		self.autosave_period = 30.0
 		self.saved = True
 		self.timer = threading.Timer(self.autosave_period, self.autosave)
