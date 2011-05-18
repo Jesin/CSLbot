@@ -23,6 +23,8 @@ def fixTokenizedText(words):
 			words[i:i+2] = list(dual_changes[tuple(words[i:i+2])])
 		if words[i] in subject_pronouns and words[i+1] is "'d":
 			words[i+1] = 'would'
+		if words[i] in subject_pronouns and words[i+1] is "'s":
+			words[i+1] = 'is'
 	return words
 
 #takes a list of tokens and properly joins it as a string
