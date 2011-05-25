@@ -44,6 +44,20 @@ def stringify(words):
 		elif words[i] in punctuation or words[i][0] is "'" and len(words[i]) < 4:
 			#print 'concatenating punctuation directly to previous word'
 			returnstring += words[i]
+		elif returnstring.endswith('"') and openquote:
+			returnstring += words[i]
 		else:
 			returnstring += ' ' + words[i]
+	#recapitalize 'I' if necessary
+	returnstring = returnstring.replace(' i ', ' I ')
+	returnstring = returnstring.replace(" i'", " I'")
 	return returnstring.capitalize()
+	
+	
+	
+	
+	
+	
+	
+	
+	
