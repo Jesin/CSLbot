@@ -6,9 +6,8 @@ import nltk
 def learn(mdict, fname):
 	fname = '../Master source list/' + fname
 	filein = open(fname)
-	fulltext = filein.read()
+	fulltext = [line.strip() for line in filein]
 	filein.close()
-	fulltext = fulltext.split('\n')[:-1]
 	
 	if fulltext[0] == 'list:':
 		print 'reading files from ' + fname
