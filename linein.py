@@ -8,7 +8,7 @@ def learn(mdict, fname):
 	filein = open(fname)
 	fulltext = [line.strip() for line in filein]
 	filein.close()
-	
+
 	if fulltext[0] == 'list:':
 		print 'reading files from ' + fname
 		fulltext = fulltext[1:]

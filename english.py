@@ -8,7 +8,7 @@ stopwords = stopwords.words('english')
 
 sentence_closings = '!?.'
 punctuation = '!?.,;:'
-br = "$BREAK$"
+br = None
 
 #special cases: things ending in 'd, gonna, i've (on the way back), gotta, wanna, tis, twas, 
 changes = {"'ll": 'will', "'re": 'are', "'ve": 'have', 'ca': 'can', "n't": 'not', "'m": 'am', 'gim': 'give', 'lem': 'let', 'whad': 'what', 'wha': 'what', 'wo': 'will'}
@@ -16,9 +16,9 @@ dual_changes = {('gon', 'na'): ('going', 'to'), ('got', 'ta'): ('got', 'to'), ('
 
 #takes a list of tokens made with nltk.word_tokenize and fixes contractions and things so we like it better
 def fixTokenizedText(words):
-	for i in range(len(words)):
+	for i in xrange(len(words)):
 		if words[i] in changes: words[i] = changes[words[i]]
-	for i in range(len(words)-1):
+	for i in xrange(len(words)-1):
 		if tuple(words[i:i+2]) in dual_changes:
 			words[i:i+2] = list(dual_changes[tuple(words[i:i+2])])
 		if words[i] in subject_pronouns and words[i+1] is "'d":
@@ -34,7 +34,7 @@ def stringify(words):
 	returnstring = words[1]
 	words = words[2:-1]
 	openquote = False
-	for i in range(len(words)):
+	for i in xrange(len(words)):
 		#print 'string is now', returnstring
 		if words[i] is '"':
 			if openquote:
@@ -52,12 +52,4 @@ def stringify(words):
 	returnstring = returnstring.replace(' i ', ' I ')
 	returnstring = returnstring.replace(" i'", " I'")
 	return returnstring.capitalize()
-	
-	
-	
-	
-	
-	
-	
-	
-	
+

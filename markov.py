@@ -22,11 +22,9 @@ maxlength = 5
 def synthesize(fds, ws=None):
 	if not ws: ws = (1,) * len(fds)
 	freqdict = {}
-	
-	for i in range(len(fds)):
+	for i in xrange(len(fds)):
 		for word in fds[i]:
 			freqdict[word] = freqdict.get(word,0) + ws[i] * fds[i][word]
-	
 	return freqdict
 
 def pick(freqdict):
@@ -34,12 +32,6 @@ def pick(freqdict):
 	for k in freqdict:
 		randval -= freqdict[k]
 		if randval <= 0: return k
-		
-def finalize(message):
-	#message[0:1] = message[0:1].upper()
-	if message[-1] not in english.sentence_closings:
-		message += '.'
-	return message
 
 def addInOneDirection(wordRelations, things, depth=1, maxDepth=3):
 	if depth>maxDepth: return
@@ -51,7 +43,7 @@ def addInOneDirection(wordRelations, things, depth=1, maxDepth=3):
 		addInOneDirection(wordRelations[things[0]][1], things[1:], depth+1)
 
 def addFromTokens(dictionary, line):
-	for x in range(1, len(line)-1):
+	for x in xrange(1, len(line)-1):
 		if line[x] not in dictionary:
 			dictionary[line[x]] = [{},{}]
 		tmp = line[:x]
@@ -74,7 +66,7 @@ def getFreqTable(dictionary, direction, words):
 	try:
 		tmp = dictionary[words[0]][direction]
 		stuff = words[1:]
-		for i in range(len(stuff)):
+		for i in xrange(len(stuff)):
 			tmp = tmp[stuff[i]][1]
 		freqdict = {}
 		for thing in tmp:
@@ -95,7 +87,7 @@ def getTopicWords(dictionary, words):
 	topics = list((set(words) - set(english.stopwords)) - set(english.punctuation))
 	if len(topics) < 1:
 		topics = words
-	topicquotients = dict(zip(topics, [markov_quotient(dictionary, w) for w in topics]))
+	topicquotients = dict(zip(topics, (markov_quotient(dictionary, w) for w in topics)))
 	#print 'topic words and quotients:'
 	#print topicquotients
 	return topicquotients
@@ -105,7 +97,7 @@ def getTopicWords(dictionary, words):
 def compilePreFrequencyTable(dictionary, words, weights=None):
 	#print 'prefreqtable words', words
 	if not weights or len(weights) < len(words): weights = [1]*len(words)
-	if len(words) is not len(weights): weights = weights[:len(words)]
+	elif len(words) is not len(weights): weights = weights[:len(words)]
 	if len(words) == 1:
 		return weightFreqTable(getFreqTable(dictionary, 0, words[:]), weights[0])
 	masterlist = {} #weightFreqTable(getFreqTable(dictionary, 0, words[:]), weights[0])
@@ -126,7 +118,7 @@ def compilePreFrequencyTable(dictionary, words, weights=None):
 # len(words) and len(weights) should be equal
 def compilePostFrequencyTable(dictionary, words, weights=None):
 	if not weights or len(weights) < len(words): weights = [1]*len(words)
-	if len(words) is not len(weights): weights = weights[:len(words)]
+	elif len(words) is not len(weights): weights = weights[:len(words)]
 	if len(words) == 1:
 		return weightFreqTable(getFreqTable(dictionary, 1, words[:]), weights[0])
 	masterlist = {} #weightFreqTable(getFreqTable(dictionary, 0, words[:]), weights[0])
@@ -155,7 +147,7 @@ def generate(dictionary, word):
 		if level < maxlevel: level +=1
 		#print line
 	level = 1
-	while line[-1] != english.br:
+	while line[-1] is not english.br:
 		newword = pick(compilePostFrequencyTable(dictionary, line[-1*level:], weights))
 #		print 'line', line
 #		print 'newword', newword
@@ -169,8 +161,8 @@ def markov_quotient(dictionary, word):
 	if word not in dictionary: return 0
 	numpres = len(dictionary[word][0])
 	numposts = len(dictionary[word][1])
-	precontexts = sum([dictionary[word][0][thing][0] for thing in dictionary[word][0]])
-	postcontexts = sum([dictionary[word][1][thing][0] for thing in dictionary[word][1]])
+	precontexts = sum(dictionary[word][0][thing][0] for thing in dictionary[word][0])
+	postcontexts = sum(dictionary[word][1][thing][0] for thing in dictionary[word][1])
 	quotient = 1.0*(precontexts+postcontexts)/(numpres+numposts)
 	return quotient
 
@@ -186,45 +178,30 @@ class MarkovDict:
 
 	def answer(self, words):
 		topictable = getTopicWords(self.relations, words)
-		for thing in topictable: topictable[thing] = (int)(topictable[thing]*10)
+		for thing in topictable: topictable[thing] = int(topictable[thing]*10)
 		topictable = dict(topictable)
 		decision = pick(topictable)
 		print 'forming a line with', decision, 'from the table', topictable
 		return generate(self.relations, decision)
-	
-	
+
 	def words(self):
 		l = self.relations.keys()
 		print 'words in the dictionary:'
 		print l
 		return 'I printed the complete list of words to the terminal, but I thought you might like to know that I have %d words in my dictionary!'%len(l)
-		
+
 	def known(self, word):
 		if word not in self.relations: return 'word %s not in dictionary' %word
 		return 'word %s has %d contexts' %(word, self.contexts(word))
 		
 	def contexts(self, word):
-		c = 0
 		location = self.relations[word]
-		for x in [location[0][w][0] for w in location[0]]: c += x
-		for x in [location[1][w][0] for w in location[1]]: c += x
-		return c/2
-		
+		return (sum(location[0][w][0] for w in location[0]) + sum(location[1][w][0] for w in location[1])) / 2
+
 	def fewestContexts(self, number=10):
 		if number > len(self.relations): number = len(self.relations)
-		word_tuples = [(word, self.contexts(word)) for word in self.relations]
-		returnWords = sorted(word_tuples, key=lambda word:word[1])[:number]
+		word_tuples = sorted(((word, self.contexts(word)) for word in self.relations), key=(lambda x: x[1]))
+		returnWords = word_tuples[:number]
 		print 'Context List:', returnWords
 		return 'These %d words have the fewest contexts: %s' %(number, [w[0] for w in returnWords])
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+
