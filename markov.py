@@ -118,7 +118,7 @@ def compilePreFrequencyTable(dictionary, words, weights=None):
 # len(words) and len(weights) should be equal
 def compilePostFrequencyTable(dictionary, words, weights=None):
 	if not weights or len(weights) < len(words): weights = [1]*len(words)
-	elif len(words) is not len(weights): weights = weights[:len(words)]
+	elif len(words) != len(weights): weights = weights[:len(words)]
 	if len(words) == 1:
 		return weightFreqTable(getFreqTable(dictionary, 1, words[:]), weights[0])
 	masterlist = {} #weightFreqTable(getFreqTable(dictionary, 0, words[:]), weights[0])
@@ -137,22 +137,15 @@ def compilePostFrequencyTable(dictionary, words, weights=None):
 def generate(dictionary, word):
 	if word not in dictionary:
 		return '$NULL$'
-	maxlevel = 5
 	line = [word]
-	level = 1
-	weights = [1, 3, 9, 27, 81, 243]
-	while line[0] != english.br:
-		newword = pick(compilePreFrequencyTable(dictionary, line[:level], weights))
-		line.insert(0, newword)
-		if level < maxlevel: level +=1
-		#print line
-	level = 1
-	while line[-1] is not english.br:
-		newword = pick(compilePostFrequencyTable(dictionary, line[-1*level:], weights))
-#		print 'line', line
-#		print 'newword', newword
-		line.append(newword)
-		if level < maxlevel: level +=1
+	weights = (1, 3, 9, 27, 81, 243)
+	while True:
+		if line[0] != english.br:
+			line.insert(0, pick(compilePreFrequencyTable(dictionary, line[:len(weights)], weights)))
+		if line[-1] != english.br:
+			line.append(pick(compilePostFrequencyTable(dictionary, line[-len(weights):], weights)))
+		elif line[0] == english.br:
+			break
 	returnstring = english.stringify(line)#' '.join(line[1:-1]).capitalize()
 	if returnstring[-1] not in english.sentence_closings: returnstring += '.'
 	return returnstring
