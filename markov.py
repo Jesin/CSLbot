@@ -140,7 +140,7 @@ def generate(dictionary, word):
 	maxlevel = 5
 	line = [word]
 	level = 1
-	weights = [1, 2, 4, 8, 16, 32]
+	weights = [1, 3, 9, 27, 81, 243]
 	while line[0] != english.br:
 		newword = pick(compilePreFrequencyTable(dictionary, line[:level], weights))
 		line.insert(0, newword)
