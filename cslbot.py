@@ -31,7 +31,7 @@ class IRCBot:
 		if self.load_dictionary():
 			print 'dictionary not found, making new one'
 			self.mdict = markov.MarkovDict()
-		self.replyrate = 1
+		self.replyrate = 100
 		self.ignorelist = set(('ribbot', 'SeeBorg-sprego', 'SeeBorg-nsfw', 'Ayanami-May', 'Ayanami_May', 'pieborg'))
 		self.autosave_period = 30.0
 		self.saved = True
@@ -66,6 +66,11 @@ class IRCBot:
 		self.saved = True
 	
 	def autosave(self):
+		#this here overrides autosaves
+		print "I'm not actually autosaving right now."
+		self.saved = True
+		return
+		
 		if self.saved: return
 		print 'autosaving dictionary...'
 		output = open(self.dictionary_name + '_auto.pkl', 'wb')
@@ -170,11 +175,16 @@ def help(connection, source, argument):
 		if argument.lower() in funchelp: response = argument.lower() + ': ' + funchelp[argument.lower()]
 		else: response = 'Matt added this command but didn\'t bother to add any help info for it. What a jerk.'
 	connection.privmsg(source, response)
+	
+def replyrate(connection, source, argument):
+	if argument.isdigit():
+		bot.replyrate = int(argument)
+	connection.privmsg(source, 'reply rate is currently %d'%bot.replyrate)
 
 #General responder
 
 #list of commands with linked functions, and their help strings
-funcdict = {'identify':registerOwner, 'alias':alias, 'exit':exit, 'save': save, 'list':commandlist, 'help':help, 'savepersona':savepersona, 'ignore':ignore, 'unignore':unignore, 'known':known, 'words':words, 'useless':useless}
+funcdict = {'identify':registerOwner, 'alias':alias, 'exit':exit, 'save': save, 'list':commandlist, 'help':help, 'savepersona':savepersona, 'ignore':ignore, 'unignore':unignore, 'known':known, 'words':words, 'useless':useless, 'replyrate': replyrate}
 
 funchelp = {'identify': 'adds you to the list of owners.  Use with \"!identify <password>\"', 'alias': 'alias multiple words to mean the same thing.  Use with \"!alias <baseword> <alias1> <alias2> <alias3> <etc>\"', 'exit': 'makes me save my dictionary and persona and quit.  Use with \"!exit\"', 'save': 'saves my dictionary.  Use with \"!save\"', 'list': 'prints a list of commands.  Use with \"!list\"', 'help': 'gives help on commands and topics.  Use with \"!help <topic>\"', 'grue':'The grue is a sinister, lurking presence in the dark places of the earth. Its favorite diet is adventurers, but its insatiable appetite is tempered by its fear of light. No grue has ever been seen by the light of day, and few have survived its fearsome jaws to tell the tale.', 'savepersona':'saves the current persona. Use with \"!savepersona\"', 'ignore': 'adds nicks to the ignorelist. Use with \"!ignore\" <nick1> <nick2> <nick3> <etc>', 'unignore': 'removes nicks from the ignorelist. Use with \"!unignore <nick1> <nick2> <nick3> <etc>\"', 'known':'gives the number of contexts a word has in the dictionary. Use with \"!known <word>\"', 'useless': 'gives the words in the dictionary with the fewest contexts, and the number of contexts they have each.  If an argument is provided, it will give that many words; otherwise, 10 will be given.'}
 
@@ -204,12 +214,10 @@ def makeResponse(speaker, connection, message, channel=None):
 	#otherwise, go ahead and learn from the line, even if you're not going to respond to it
 	bot.mdict.learn(message)
 	bot.log_line(speaker + ': ' + message + '\n')
-	if channel and (message.lower().find(bot.nick) >= 0 or random.random() < bot.replyrate):
+	if channel and (message.lower().find(bot.nick) >= 0 or random.random()*100 < bot.replyrate or channel==None):
 		response = dialogue.formResponse(message, speaker, bot.mdict, True)
 		bot.log_line('me: ' + response + '\n')
 		connection.privmsg(target, response)
-	else:
-		connection.privmsg(target, dialogue.formResponse(message, speaker, bot.mdict))
 
 
 #Handlers
