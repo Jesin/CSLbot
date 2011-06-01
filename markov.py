@@ -138,7 +138,7 @@ def generate(dictionary, word):
 	if word not in dictionary:
 		return '$NULL$'
 	line = [word]
-	weights = [1, 3, 9, 27, 54, 108]
+	weights = (1, 3, 9, 27, 81, 243)
 	while True:
 		if line[0] != english.br:
 			line.insert(0, pick(compilePreFrequencyTable(dictionary, line[:len(weights)], weights)))
